@@ -1,6 +1,9 @@
 """公众号自动化主入口
 
 用法：
+    # 上传封面图并获取 media_id
+    python main.py upload --image cover.jpg
+
     # 立即发布一篇文章
     python main.py publish --topic "2025年AI发展趋势"
 
@@ -24,6 +27,7 @@ from dotenv import load_dotenv
 
 sys.path.insert(0, os.path.dirname(__file__))
 from src.content_generator import ContentGenerator
+from src.topic_manager import pick_today_topic
 from src.wechat_api import WeChatClient, WeChatAPIError
 
 load_dotenv()
@@ -102,6 +106,20 @@ def generate_preview(topic: str) -> None:
     print(article["content"])
 
 
+def upload_thumb(image_path: str) -> None:
+    cfg = _require_env("WECHAT_APP_ID", "WECHAT_APP_SECRET")
+    wechat = WeChatClient(cfg["WECHAT_APP_ID"], cfg["WECHAT_APP_SECRET"])
+
+    if not os.path.exists(image_path):
+        print(f"文件不存在：{image_path}")
+        sys.exit(1)
+
+    print(f"正在上传封面图：{image_path}")
+    media_id = wechat.upload_thumb(image_path)
+    print(f"上传成功！media_id：{media_id}")
+    print(f"请将此 media_id 填入 .env 的 DEFAULT_THUMB_MEDIA_ID，或 GitHub Secrets 中")
+
+
 def batch_publish(topics_file: str) -> None:
     with open(topics_file, encoding="utf-8") as f:
         topics = [line.strip() for line in f if line.strip()]
@@ -121,8 +139,11 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="微信公众号自动化工具")
     sub = parser.add_subparsers(dest="cmd", required=True)
 
+    p_upl = sub.add_parser("upload", help="上传封面图，获取 media_id")
+    p_upl.add_argument("--image", required=True, help="本地图片路径（JPG/PNG，≤1MB）")
+
     p_pub = sub.add_parser("publish", help="生成并发布文章")
-    p_pub.add_argument("--topic", required=True)
+    p_pub.add_argument("--topic", default=None, help="文章主题，留空则从 topics.txt 自动选取")
     p_pub.add_argument("--thumb", default=None, help="封面图 media_id")
 
     p_gen = sub.add_parser("generate", help="仅生成预览，不发布")
@@ -137,8 +158,11 @@ def main() -> None:
 
     args = parser.parse_args()
 
-    if args.cmd == "publish":
-        publish_article(args.topic, args.thumb)
+    if args.cmd == "upload":
+        upload_thumb(args.image)
+    elif args.cmd == "publish":
+        topic = args.topic or pick_today_topic("topics.txt")
+        publish_article(topic, args.thumb)
     elif args.cmd == "generate":
         generate_preview(args.topic)
     elif args.cmd == "batch":
