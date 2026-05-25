@@ -1,6 +1,7 @@
 """用 Claude API 生成公众号文章内容"""
 
 import anthropic
+from src.html_template import render as render_html
 
 
 SYSTEM_PROMPT = """你是一位专业的微信公众号内容创作者。
@@ -8,8 +9,10 @@ SYSTEM_PROMPT = """你是一位专业的微信公众号内容创作者。
 输出格式要求：
 - 第一行：文章标题（不加任何前缀）
 - 第二行：空行
-- 第三行开始：正文（支持 HTML，如 <h2>、<p>、<strong>、<br> 等）
-- 最后：一句话摘要（以 DIGEST: 开头，单独一行）"""
+- 第三行开始：正文（使用 HTML 标签：<h2> 小标题、<p> 段落、<strong> 加粗、<blockquote> 引用、<ul><li> 列表）
+- 最后：一句话摘要（以 DIGEST: 开头，单独一行）
+
+注意：正文只输出 HTML 片段，不要包含 <html>/<body>/<style> 等外层标签。"""
 
 
 class ContentGenerator:
@@ -42,7 +45,9 @@ class ContentGenerator:
         )
 
         raw = message.content[0].text
-        return self._parse(raw)
+        result = self._parse(raw)
+        result["content"] = render_html(result["content"])
+        return result
 
     def generate_batch(self, topics: list[str]) -> list[dict]:
         """批量生成多篇文章"""

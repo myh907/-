@@ -1,6 +1,9 @@
 """公众号自动化主入口
 
 用法：
+    # 检查 API 凭证是否正确
+    python main.py test
+
     # 上传封面图并获取 media_id
     python main.py upload --image cover.jpg
 
@@ -12,6 +15,9 @@
 
     # 从文件批量发布
     python main.py batch --file topics.txt
+
+    # 查看最近发布记录
+    python main.py log
 
     # 启动定时任务（每天 PUBLISH_SCHEDULE 时间自动发布）
     python main.py schedule --topic "每日科技资讯"
@@ -27,6 +33,7 @@ from dotenv import load_dotenv
 
 sys.path.insert(0, os.path.dirname(__file__))
 from src.content_generator import ContentGenerator
+from src.publish_log import write as log_write, read_recent as log_recent
 from src.topic_manager import pick_today_topic
 from src.wechat_api import WeChatClient, WeChatAPIError
 
@@ -42,6 +49,42 @@ def _require_env(*keys: str) -> dict:
     return {k: os.environ[k] for k in keys}
 
 # ── 核心流程 ──────────────────────────────────────────────────────────────────
+
+def test_connections() -> None:
+    """验证微信 API 和 Anthropic API 凭证是否有效。"""
+    cfg = _require_env("WECHAT_APP_ID", "WECHAT_APP_SECRET", "ANTHROPIC_API_KEY")
+    ok = True
+
+    print("[ 1/2 ] 检查微信公众号 API…")
+    try:
+        wechat = WeChatClient(cfg["WECHAT_APP_ID"], cfg["WECHAT_APP_SECRET"])
+        token = wechat.get_access_token()
+        print(f"        access_token 获取成功（{token[:8]}…）")
+    except WeChatAPIError as e:
+        print(f"        失败：{e}")
+        ok = False
+    except Exception as e:
+        print(f"        网络错误：{e}")
+        ok = False
+
+    print("[ 2/2 ] 检查 Anthropic API…")
+    try:
+        import anthropic
+        client = anthropic.Anthropic(api_key=cfg["ANTHROPIC_API_KEY"])
+        msg = client.messages.create(
+            model="claude-haiku-4-5-20251001",
+            max_tokens=16,
+            messages=[{"role": "user", "content": "ping"}],
+        )
+        print(f"        连接正常（model: {msg.model}）")
+    except Exception as e:
+        print(f"        失败：{e}")
+        ok = False
+
+    print()
+    print("全部通过，可以开始使用！" if ok else "有配置项异常，请检查 .env 文件。")
+    sys.exit(0 if ok else 1)
+
 
 def publish_article(topic: str, thumb_media_id: str | None = None) -> None:
     cfg = _require_env("WECHAT_APP_ID", "WECHAT_APP_SECRET", "ANTHROPIC_API_KEY")
@@ -79,19 +122,24 @@ def publish_article(topic: str, thumb_media_id: str | None = None) -> None:
     print(f"已提交发布，publish_id：{publish_id}")
 
     # 轮询发布状态（最多等 30 秒）
+    final_status = "timeout"
     for _ in range(6):
         time.sleep(5)
         status = wechat.get_publish_status(publish_id)
         publish_status = status.get("publish_info", {}).get("status", -1)
         if publish_status == 0:
             print("发布成功！")
-            return
+            final_status = "success"
+            break
         if publish_status in (2, 3):
             print(f"发布失败，状态：{status}")
-            return
+            final_status = "failed"
+            break
         print("发布中，稍候…")
+    else:
+        print("发布超时，请在公众号后台查看状态")
 
-    print("发布超时，请在公众号后台查看状态")
+    log_write(topic, article["title"], media_id, publish_id, final_status)
 
 
 def generate_preview(topic: str) -> None:
@@ -120,6 +168,19 @@ def upload_thumb(image_path: str) -> None:
     print(f"请将此 media_id 填入 .env 的 DEFAULT_THUMB_MEDIA_ID，或 GitHub Secrets 中")
 
 
+def show_log(n: int = 10) -> None:
+    entries = log_recent(n)
+    if not entries:
+        print("暂无发布记录")
+        return
+    print(f"最近 {len(entries)} 条发布记录：\n")
+    for e in entries:
+        status_icon = {"success": "✓", "failed": "✗", "timeout": "?"}.get(e["status"], "-")
+        print(f"  {status_icon} {e['time'][:16]}  {e['title']}")
+        print(f"      主题：{e['topic']}  状态：{e['status']}")
+        print()
+
+
 def batch_publish(topics_file: str) -> None:
     with open(topics_file, encoding="utf-8") as f:
         topics = [line.strip() for line in f if line.strip()]
@@ -139,6 +200,8 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="微信公众号自动化工具")
     sub = parser.add_subparsers(dest="cmd", required=True)
 
+    sub.add_parser("test", help="验证微信 API 和 Anthropic API 凭证")
+
     p_upl = sub.add_parser("upload", help="上传封面图，获取 media_id")
     p_upl.add_argument("--image", required=True, help="本地图片路径（JPG/PNG，≤1MB）")
 
@@ -152,13 +215,18 @@ def main() -> None:
     p_bat = sub.add_parser("batch", help="从文件批量发布")
     p_bat.add_argument("--file", required=True)
 
+    p_log = sub.add_parser("log", help="查看最近发布记录")
+    p_log.add_argument("--n", type=int, default=10, help="显示条数（默认 10）")
+
     p_sch = sub.add_parser("schedule", help="定时发布")
     p_sch.add_argument("--topic", required=True)
     p_sch.add_argument("--time", default=None, help="HH:MM，默认读取 PUBLISH_SCHEDULE 环境变量")
 
     args = parser.parse_args()
 
-    if args.cmd == "upload":
+    if args.cmd == "test":
+        test_connections()
+    elif args.cmd == "upload":
         upload_thumb(args.image)
     elif args.cmd == "publish":
         topic = args.topic or pick_today_topic("topics.txt")
@@ -167,6 +235,8 @@ def main() -> None:
         generate_preview(args.topic)
     elif args.cmd == "batch":
         batch_publish(args.file)
+    elif args.cmd == "log":
+        show_log(args.n)
     elif args.cmd == "schedule":
         publish_time = args.time or os.getenv("PUBLISH_SCHEDULE", "09:00")
         print(f"定时任务已启动，每天 {publish_time} 发布：{args.topic}")
