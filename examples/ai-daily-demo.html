@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI 圈日报 · 2026.05.30</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: #0b0d12;
+  font-family: -apple-system, 'PingFang SC', 'Helvetica Neue', 'Microsoft YaHei', sans-serif;
+  display: flex; justify-content: center; padding: 40px 16px;
+}
+.card {
+  width: 100%; max-width: 720px;
+  background: radial-gradient(1200px 400px at 0% 0%, #1b2a4a 0%, transparent 60%),
+              linear-gradient(160deg, #111726 0%, #0c0f18 100%);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 28px; overflow: hidden;
+  box-shadow: 0 30px 80px rgba(0,0,0,0.55);
+}
+.hd { padding: 40px 40px 28px; position: relative; }
+.hd::after {
+  content: ''; position: absolute; left: 40px; right: 40px; bottom: 0; height: 1px;
+  background: linear-gradient(90deg, rgba(94,234,212,0.6), rgba(94,234,212,0) 70%);
+}
+.brand { display: flex; align-items: center; gap: 12px; }
+.logo {
+  width: 44px; height: 44px; border-radius: 12px;
+  background: linear-gradient(135deg, #5eead4, #3b82f6);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 22px; font-weight: 800; color: #0b0d12;
+}
+.brand-txt .t1 { color: #fff; font-size: 22px; font-weight: 800; letter-spacing: 1px; }
+.brand-txt .t2 { color: #5eead4; font-size: 12px; letter-spacing: 3px; margin-top: 2px; }
+.date-row { display: flex; align-items: baseline; gap: 12px; margin-top: 22px; }
+.date-row .d { color: #fff; font-size: 30px; font-weight: 800; }
+.date-row .w { color: #8a93a6; font-size: 15px; }
+.date-row .ed {
+  margin-left: auto; color: #5eead4; font-size: 12px;
+  border: 1px solid rgba(94,234,212,0.4); border-radius: 999px; padding: 4px 12px;
+}
+.intro {
+  margin: 26px 40px 6px; padding: 18px 20px;
+  background: rgba(94,234,212,0.06); border-left: 3px solid #5eead4; border-radius: 0 12px 12px 0;
+  color: #e6edf6; font-size: 16px; line-height: 1.7;
+}
+.list { padding: 18px 40px 8px; }
+.item { display: flex; gap: 18px; padding: 20px 0; border-top: 1px solid rgba(255,255,255,0.06); }
+.item:first-child { border-top: none; }
+.num {
+  flex: none; width: 30px; color: #3b82f6; font-size: 22px; font-weight: 800;
+  font-variant-numeric: tabular-nums; line-height: 1.3;
+}
+.body { flex: 1; min-width: 0; }
+.tag {
+  display: inline-block; font-size: 11px; color: #5eead4;
+  background: rgba(59,130,246,0.14); border-radius: 6px; padding: 2px 8px; margin-bottom: 8px;
+}
+.title { color: #fff; font-size: 19px; font-weight: 700; line-height: 1.4; }
+.take { color: #aeb6c4; font-size: 14px; margin-top: 8px; line-height: 1.6; }
+.why { color: #6f7889; font-size: 13px; margin-top: 8px; line-height: 1.6; }
+.why b { color: #8a93a6; font-weight: 600; }
+.ft {
+  margin: 14px 40px 36px; padding-top: 22px; border-top: 1px solid rgba(255,255,255,0.06);
+  display: flex; align-items: center; justify-content: space-between;
+}
+.closing { color: #cdd5e1; font-size: 14px; line-height: 1.6; max-width: 78%; }
+.by { color: #4a5366; font-size: 12px; text-align: right; }
+.by b { color: #5eead4; }
+</style>
+</head>
+<body>
+  <div class="card">
+    <div class="hd">
+      <div class="brand">
+        <div class="logo">AI</div>
+        <div class="brand-txt">
+          <div class="t1">AI 圈日报</div>
+          <div class="t2">DAILY AI BRIEFING</div>
+        </div>
+      </div>
+      <div class="date-row">
+        <span class="d">2026.05.30</span>
+        <span class="w">周六</span>
+        <span class="ed">每日精选 · 5 条</span>
+      </div>
+    </div>
+    <div class="intro">模型卷参数、Agent 卷落地，今天 AI 圈最大的变量是「便宜」。</div>
+    <div class="list">
+      <div class="item">
+        <div class="num">01</div>
+        <div class="body">
+          <span class="tag">模型</span>
+          <div class="title">新一代旗舰模型把价格打下来了</div>
+          <div class="take">性能不输上一代，价格腰斩——这才是真·普惠。</div>
+          <div class="why"><b>为什么重要 · </b>推理成本直接决定 AI 产品的毛利，降价会逼着一批套壳产品重做账。</div>
+        </div>
+      </div>
+      <div class="item">
+        <div class="num">02</div>
+        <div class="body">
+          <span class="tag">Agent</span>
+          <div class="title">编码 Agent 拿下真实开源 issue</div>
+          <div class="take">从「能写代码」到「能交活」，门槛越过了一道坎。</div>
+          <div class="why"><b>为什么重要 · </b>意味着初级重复性工程任务开始可被自动化，团队配置要重新算。</div>
+        </div>
+      </div>
+      <div class="item">
+        <div class="num">03</div>
+        <div class="body">
+          <span class="tag">开源</span>
+          <div class="title">又一个高质量开源模型上线</div>
+          <div class="take">闭源还在挤牙膏，开源已经追到了身后半个身位。</div>
+          <div class="why"><b>为什么重要 · </b>对中小团队是利好：本地部署 + 可控成本，数据也不用出门。</div>
+        </div>
+      </div>
+      <div class="item">
+        <div class="num">04</div>
+        <div class="body">
+          <span class="tag">资本</span>
+          <div class="title">AI 基础设施赛道又一笔大额融资</div>
+          <div class="take">卖铲子的永远先赚钱，这轮淘金热依旧。</div>
+          <div class="why"><b>为什么重要 · </b>算力与数据管线仍是瓶颈，资金流向能看出下一个卡脖子环节。</div>
+        </div>
+      </div>
+      <div class="item">
+        <div class="num">05</div>
+        <div class="body">
+          <span class="tag">争议</span>
+          <div class="title">AI 生成内容版权再起争论</div>
+          <div class="take">技术跑得太快，规则还在系鞋带。</div>
+          <div class="why"><b>为什么重要 · </b>合规边界没定清楚之前，商业化的每一步都带着不确定性。</div>
+        </div>
+      </div>
+    </div>
+    <div class="ft">
+      <div class="closing">便宜 + 可用 + 可控，三条线交汇处，就是明年的产品机会。</div>
+      <div class="by">由 <b>Claude</b> 生成<br>AI 圈日报机器人</div>
+    </div>
+  </div>
+</body>
+</html>
