@@ -21,10 +21,12 @@ pip install -r requirements.txt
 
 # 不配任何 key，直接看日报海报长什么样
 python main.py daily --demo
-# → 生成 output/ai-daily-YYYY-MM-DD.html，浏览器打开即可
+# → 同时生成 HTML（可截图）和 PNG（可直接转发）到 output/
 ```
 
-> 想直接看效果？仓库里有一张示例海报：[`examples/ai-daily-demo.html`](examples/ai-daily-demo.html)
+![示例海报](examples/ai-daily-demo.png)
+
+> 仓库里附带示例：[`examples/ai-daily-demo.png`](examples/ai-daily-demo.png) / [`examples/ai-daily-demo.html`](examples/ai-daily-demo.html)
 
 ## 📝 正式使用
 
@@ -70,6 +72,7 @@ daily_sources.txt        # 每日 AI 热点输入（你来填）
 src/
   daily_digest.py        # 🌟 Claude 主编：热点 → 结构化日报
   digest_card.py         # 🌟 渲染海报 HTML + 微信兼容 HTML
+  poster_png.py          # 🌟 直接导出 PNG 分享图（无需浏览器）
   content_generator.py   # 单篇文章生成
   html_template.py       # 公众号 inline-style 排版
   wechat_api.py          # 微信公众号 API 封装

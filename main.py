@@ -44,6 +44,7 @@ sys.path.insert(0, os.path.dirname(__file__))
 from src.content_generator import ContentGenerator
 from src.daily_digest import DailyDigest, demo_digest, load_sources
 from src.digest_card import render_poster, digest_to_article
+from src.poster_png import render_png
 from src.publish_log import write as log_write, read_recent as log_recent
 from src.topic_manager import pick_today_topic
 from src.wechat_api import WeChatClient, WeChatAPIError
@@ -227,16 +228,25 @@ def daily_report(
         print(f"读取到 {len(items)} 条热点，正在请 Claude 主编整理日报…")
         digest = DailyDigest(cfg["ANTHROPIC_API_KEY"]).generate(items)
 
-    # 渲染并保存海报
+    # 渲染并保存海报（HTML + PNG）
     os.makedirs(out_dir, exist_ok=True)
     poster_path = os.path.join(out_dir, f"ai-daily-{digest['date']}.html")
     with open(poster_path, "w", encoding="utf-8") as f:
         f.write(render_poster(digest))
 
+    png_path = os.path.join(out_dir, f"ai-daily-{digest['date']}.png")
+    try:
+        render_png(digest, png_path)
+    except Exception as e:
+        png_path = None
+        print(f"（PNG 导出跳过：{e}）")
+
     print(f"\n卷首语：{digest.get('intro', '')}")
     for i, it in enumerate(digest.get("items", []), 1):
         print(f"  {i:02d}. [{it.get('tag', '')}] {it.get('title', '')}")
-    print(f"\n海报已生成：{poster_path}（浏览器打开即可截图转发）")
+    print(f"\n海报 HTML：{poster_path}（浏览器打开可截图）")
+    if png_path:
+        print(f"分享图 PNG：{png_path}（可直接转发）")
 
     if not publish:
         return
