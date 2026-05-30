@@ -19,6 +19,15 @@
     # 查看最近发布记录
     python main.py log
 
+    # 生成今日「AI 圈日报」海报（读取 daily_sources.txt）
+    python main.py daily
+
+    # 不配 API key，直接看日报海报示例效果
+    python main.py daily --demo
+
+    # 生成日报并发布到公众号
+    python main.py daily --publish
+
     # 启动定时任务（每天 PUBLISH_SCHEDULE 时间自动发布）
     python main.py schedule --topic "每日科技资讯"
 """
@@ -33,6 +42,9 @@ from dotenv import load_dotenv
 
 sys.path.insert(0, os.path.dirname(__file__))
 from src.content_generator import ContentGenerator
+from src.daily_digest import DailyDigest, demo_digest, load_sources
+from src.digest_card import render_poster, digest_to_article
+from src.poster_png import render_png
 from src.publish_log import write as log_write, read_recent as log_recent
 from src.topic_manager import pick_today_topic
 from src.wechat_api import WeChatClient, WeChatAPIError
@@ -194,6 +206,74 @@ def batch_publish(topics_file: str) -> None:
         time.sleep(2)  # 避免请求过快
 
 
+def daily_report(
+    sources_file: str = "daily_sources.txt",
+    demo: bool = False,
+    publish: bool = False,
+    out_dir: str = "output",
+) -> None:
+    """生成今日「AI 圈日报」海报，可选发布到公众号。"""
+    if demo:
+        print("使用示例数据生成日报（demo 模式，无需 API key）…")
+        digest = demo_digest()
+    else:
+        cfg = _require_env("ANTHROPIC_API_KEY")
+        items = load_sources(sources_file)
+        if not items:
+            print(
+                f"{sources_file} 没有热点内容。\n"
+                f"请在该文件每行写一条今天的 AI 热点，或先用 --demo 体验效果。"
+            )
+            sys.exit(1)
+        print(f"读取到 {len(items)} 条热点，正在请 Claude 主编整理日报…")
+        digest = DailyDigest(cfg["ANTHROPIC_API_KEY"]).generate(items)
+
+    # 渲染并保存海报（HTML + PNG）
+    os.makedirs(out_dir, exist_ok=True)
+    poster_path = os.path.join(out_dir, f"ai-daily-{digest['date']}.html")
+    with open(poster_path, "w", encoding="utf-8") as f:
+        f.write(render_poster(digest))
+
+    png_path = os.path.join(out_dir, f"ai-daily-{digest['date']}.png")
+    try:
+        render_png(digest, png_path)
+    except Exception as e:
+        png_path = None
+        print(f"（PNG 导出跳过：{e}）")
+
+    print(f"\n卷首语：{digest.get('intro', '')}")
+    for i, it in enumerate(digest.get("items", []), 1):
+        print(f"  {i:02d}. [{it.get('tag', '')}] {it.get('title', '')}")
+    print(f"\n海报 HTML：{poster_path}（浏览器打开可截图）")
+    if png_path:
+        print(f"分享图 PNG：{png_path}（可直接转发）")
+
+    if not publish:
+        return
+
+    cfg = _require_env("WECHAT_APP_ID", "WECHAT_APP_SECRET")
+    wechat = WeChatClient(cfg["WECHAT_APP_ID"], cfg["WECHAT_APP_SECRET"])
+    article = digest_to_article(digest)
+    cover = os.getenv("DEFAULT_THUMB_MEDIA_ID", "")
+    if not cover:
+        print("警告：未配置封面图 media_id（DEFAULT_THUMB_MEDIA_ID），发布可能失败")
+
+    draft = {
+        "title": article["title"],
+        "author": os.getenv("AUTHOR_NAME", ""),
+        "digest": article["digest"],
+        "content": article["content"],
+        "content_source_url": "",
+        "thumb_media_id": cover,
+        "need_open_comment": 1,
+    }
+    print("\n正在创建草稿并发布…")
+    media_id = wechat.add_draft([draft])
+    publish_id = wechat.publish(media_id)
+    print(f"已提交发布，publish_id：{publish_id}")
+    log_write("AI 圈日报", article["title"], media_id, publish_id, "submitted")
+
+
 # ── CLI ────────────────────────────────────────────────────────────────────────
 
 def main() -> None:
@@ -218,6 +298,11 @@ def main() -> None:
     p_log = sub.add_parser("log", help="查看最近发布记录")
     p_log.add_argument("--n", type=int, default=10, help="显示条数（默认 10）")
 
+    p_day = sub.add_parser("daily", help="生成「AI 圈日报」海报，可选发布")
+    p_day.add_argument("--sources", default="daily_sources.txt", help="热点输入文件")
+    p_day.add_argument("--demo", action="store_true", help="用示例数据，无需 API key")
+    p_day.add_argument("--publish", action="store_true", help="生成后发布到公众号")
+
     p_sch = sub.add_parser("schedule", help="定时发布")
     p_sch.add_argument("--topic", required=True)
     p_sch.add_argument("--time", default=None, help="HH:MM，默认读取 PUBLISH_SCHEDULE 环境变量")
@@ -237,6 +322,8 @@ def main() -> None:
         batch_publish(args.file)
     elif args.cmd == "log":
         show_log(args.n)
+    elif args.cmd == "daily":
+        daily_report(sources_file=args.sources, demo=args.demo, publish=args.publish)
     elif args.cmd == "schedule":
         publish_time = args.time or os.getenv("PUBLISH_SCHEDULE", "09:00")
         print(f"定时任务已启动，每天 {publish_time} 发布：{args.topic}")
